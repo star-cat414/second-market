@@ -1,7 +1,7 @@
 // app/(marketplace)/sell/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { createListing } from '@/app/actions/listings';
 import { UploadCloud, X, Loader2 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { UploadCloud, X, Loader2 } from 'lucide-react';
 export default function SellPage() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isPending, startTransition] = useTransition(); // 💡 Form တင်နေစဉ် Loading ပြရန်
   const supabase = createClient();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +45,18 @@ export default function SellPage() {
           <p className="text-sm text-zinc-500">List your item on Second Market instantly.</p>
         </div>
 
-        <form action={createListing} className="space-y-5">
+        {/* 💡 ပြင်ဆင်လိုက်သည့်အပိုင်း: TypeScript Error ကင်းစင်စေရန် Inline Wrapper ဖြင့် Server Action ကို ချိတ်ဆက်ခြင်း */}
+        <form 
+          action={(formData: FormData) => {
+            startTransition(async () => {
+              const res = await createListing(formData);
+              if (res?.error) {
+                alert(res.error); // Error ရှိပါက alert ပြမည်
+              }
+            });
+          }} 
+          className="space-y-5"
+        >
           {/* Hidden Inputs for Streamed Images */}
           {images.map((url, idx) => (
             <input key={idx} type="hidden" name="images" value={url} />
@@ -60,7 +72,7 @@ export default function SellPage() {
                   <button
                     type="button"
                     onClick={() => setImages(images.filter((_, i) => i !== idx))}
-                    className="absolute top-1.5 right-1.5 p-1 bg-black/60 hover:bg-black rounded-full text-white"
+                    className="absolute top-1.5 right-1.5 p-1 bg-black/60 hover:bg-black rounded-full text-white cursor-pointer"
                   >
                     <X size={12} />
                   </button>
@@ -113,8 +125,13 @@ export default function SellPage() {
             <textarea name="description" rows={4} required className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent focus:outline-none focus:ring-2 focus:ring-black" placeholder="Describe the condition, usage, and key details..."></textarea>
           </div>
 
-          <button type="submit" className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-xl hover:opacity-90 active:scale-[0.99] transition">
-            Publish Listing
+          <button 
+            type="submit" 
+            disabled={isPending}
+            className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-xl hover:opacity-90 active:scale-[0.99] transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          >
+            {isPending && <Loader2 size={16} className="animate-spin" />}
+            {isPending ? 'Publishing...' : 'Publish Listing'}
           </button>
         </form>
       </div>
