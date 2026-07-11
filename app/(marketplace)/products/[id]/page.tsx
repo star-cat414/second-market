@@ -1,8 +1,10 @@
 // app/(marketplace)/products/[id]/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
-import { MapPin, Star, Tag, Calendar } from 'lucide-react';
+import Link from 'next/link';
+import { MapPin, Star, Tag, Calendar, MessageSquare } from 'lucide-react';
 import AddReviewForm from '@/components/marketplace/AddReviewForm';
+import ReportSection from '@/components/marketplace/ReportSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,39 +95,59 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </div>
       </div>
 
-      {/* RIGHT: SELLER INFO & ADD REVIEW FORM (Column 3) */}
+      {/* RIGHT: SELLER INFO, CHAT BUTTON & ADD REVIEW FORM (Column 3) */}
       <div className="space-y-6">
         {/* Seller Info Card */}
-        <div className="p-5 bg-zinc-50/50 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-zinc-800/60 rounded-3xl space-y-4">
-          <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">About the Seller</h4>
-          
-          <div className="flex items-center gap-3">
-            <img 
-              src={sellerProfile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120'} 
-              alt="Seller Avatar" 
-              className="w-12 h-12 rounded-full object-cover border border-zinc-200"
-            />
-            <div>
-              <h5 className="text-sm font-bold text-zinc-900 dark:text-white">{sellerProfile?.username || 'Unknown Seller'}</h5>
-              
-              {/* Seller's Aggregate Rating */}
-              <div className="flex items-center gap-1 text-xs font-bold text-amber-500 mt-0.5">
-                <Star size={12} fill="currentColor" />
-                <span>{avgRating}</span>
-                <span className="text-zinc-400 font-normal">({totalReviews} reviews)</span>
+        <div className="p-5 bg-zinc-50/50 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-zinc-800/60 rounded-3xl space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">About the Seller</h4>
+            
+            <div className="flex items-center gap-3">
+              <img 
+                src={sellerProfile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120'} 
+                alt="Seller Avatar" 
+                className="w-12 h-12 rounded-full object-cover border border-zinc-200"
+              />
+              <div>
+                <h5 className="text-sm font-bold text-zinc-900 dark:text-white">{sellerProfile?.username || 'Unknown Seller'}</h5>
+                
+                {/* Seller's Aggregate Rating */}
+                <div className="flex items-center gap-1 text-xs font-bold text-amber-500 mt-0.5">
+                  <Star size={12} fill="currentColor" />
+                  <span>{avgRating}</span>
+                  <span className="text-zinc-400 font-normal">({totalReviews} reviews)</span>
+                </div>
               </div>
             </div>
+
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500 border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
+              <MapPin size={13} className="text-zinc-400" />
+              <span>Ships from: <strong className="text-zinc-700 dark:text-zinc-300">{sellerProfile?.location || 'Not Specified'}</strong></span>
+            </div>
+            
+            {sellerProfile?.bio && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 italic bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800/40">
+                `{sellerProfile.bio}`
+              </p>
+            )}
+
+            {/* 💡 CHAT WITH SELLER BUTTON - မိမိပစ္စည်းမဟုတ်မှသာ ပြမည် */}
+            {user && !isOwnProduct && (
+              <Link 
+                href={`/inbox?seller=${product.seller_id}&listing=${product.id}`}
+                className="w-full py-3 mt-4 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-xl hover:opacity-90 active:scale-[0.99] transition flex items-center justify-center gap-2 shadow-xs"
+              >
+                <MessageSquare size={16} />
+                <span className="text-sm">Chat with Seller</span>
+              </Link>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
-            <MapPin size={13} className="text-zinc-400" />
-            <span>Ships from: <strong className="text-zinc-700 dark:text-zinc-300">{sellerProfile?.location || 'Not Specified'}</strong></span>
-          </div>
-          
-          {sellerProfile?.bio && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 italic bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800/40">
-              `{sellerProfile.bio}`
-            </p>
+          {/* 💡 REPORT LISTING BUTTON - တိုင်ကြားရန်နေရာ (မိမိပစ္စည်းမဟုတ်က သိမ်းဆည်းပြသမည်) */}
+          {user && !isOwnProduct && (
+            <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
+              <ReportSection listingId={product.id} />
+            </div>
           )}
         </div>
 
@@ -137,8 +159,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             This is your own listing.
           </div>
         ) : (
-          <div className="p-4 bg-zinc-50 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400 rounded-2xl">
-            Please log in to review this seller.
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400 rounded-2xl flex flex-col gap-2">
+            <span>Please log in to chat, review or report this seller.</span>
+            <Link href="/login" className="text-black dark:text-white font-semibold underline">Login Here</Link>
           </div>
         )}
       </div>
